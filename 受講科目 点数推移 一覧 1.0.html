@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 受講科目 点数推移 一覧 🌸</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #fff5f7;
+            background-image: radial-gradient(#ffd1dc 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #2b1f21;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 45px;
+            border-radius: 25px;
+            box-shadow: 0 10px 40px rgba(224, 139, 155, 0.12);
+            border: 2px solid #ffcbd7;
+        }
+        h1 { color: #b54a5f; text-align: center; font-size: 28px; margin-top: 0; margin-bottom: 45px; font-weight: bold; letter-spacing: 1px; }
+        
+        .file-zone {
+            border: 3px dashed #f391a6;
+            background-color: #fffcfd;
+            border-radius: 15px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 40px;
+        }
+        .file-zone.dragover { background-color: #ffe8ec; border-color: #d46a7f; transform: scale(1.01); }
+        .file-zone p { margin: 0; color: #5a3d42; font-weight: bold; font-size: 15px; }
+        .file-zone input { display: none; }
+        
+        .btn-container { text-align: center; margin-bottom: 50px; }
+        .btn {
+            background: linear-gradient(135deg, #ff8fa3 0%, #cc5a75 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(204, 90, 117, 0.3);
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(204, 90, 117, 0.5); }
+        
+        .section-block {
+            margin-bottom: 55px; 
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .result-section { display: none; }
+        
+        .section-title {
+            color: #b54a5f; font-size: 20px; border-left: 5px solid #ff8fa3; padding-left: 14px; margin-top: 0; margin-bottom: 22px; font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+        }
+        th { background-color: #ffe5ea; color: #6e2e3b; font-weight: bold; font-size: 14px; padding: 16px 14px; border: 1px solid #e0b0b8; }
+        td { padding: 16px 14px; border: 1px solid #e0b0b8; color: #2b1f21; line-height: 1.5; }
+        tr:hover { background-color: #fffdfd; }
+
+        .up-trend { color: #c2185b; font-weight: bold; font-size: 12px; }
+        .down-trend { color: #455a64; font-weight: bold; font-size: 12px; }
+        
+        .subject-box {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 12px;
+            margin: 3px;
+            border: 2px solid transparent;
+        }
+        .enrolled-style {
+            border: 2px solid #cc5a75 !important;
+            box-shadow: 0 0 5px rgba(204, 90, 117, 0.2);
+        }
+        
+        .sub-eng { background-color: #d1e8ff; color: #0a377e; border-color: transparent; }
+        .sub-mat { background-color: #d2f2d4; color: #114714; border-color: transparent; }
+        .sub-sci { background-color: #ffe6c7; color: #8a3300; border-color: transparent; }
+        .sub-soc { background-color: #f1daf8; color: #3b0770; border-color: transparent; }
+        .sub-jap { background-color: #ffd6db; color: #780916; border-color: transparent; }
+
+        .chart-row td { padding: 18px 20px 24px 20px; background-color: #ffffff; }
+        .small-chart-container { width: 100%; max-width: 340px; height: 85px; margin: 0 auto; }
+        .empty-msg { color: #8c7074; font-style: italic; padding: 20px !important; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; padding: 0; }
+            .container { box-shadow: none !important; border: none !important; padding: 0 !important; }
+            .file-zone, .btn-container { display: none !important; }
+            .section-block { margin-bottom: 40px !important; page-break-inside: avoid; }
+            th { background-color: #f0f0f0 !important; color: #000000 !important; border: 1px solid #000000 !important; padding: 10px !important; }
+            td { border: 1px solid #000000 !important; color: #000000 !important; padding: 10px !important; }
+            .subject-box { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000000 !important; }
+            .enrolled-style { border: 2px solid #000000 !important; font-weight: bold; }
+            .up-trend { color: #000000 !important; font-weight: bold; }
+            .down-trend { color: #555555 !important; font-weight: normal; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌸 受講科目 点数推移 一覧 🌸</h1>
+
+    <div class="file-zone" id="dropZone" onclick="document.getElementById('excelFiles').click()">
+        <p>✨ ここに【成績Excel】と【受講科目Excel】をすべてまとめてドラッグ＆ドロップしてください ✨</p>
+        <p style="font-size: 13px; color: #8c7074; margin-top: 15px;" id="fileCount">ファイルが選択されていません</p>
+        <input type="file" id="excelFiles" multiple accept=".xlsx, .xls">
+    </div>
+
+    <div class="btn-container">
+        <button class="btn" onclick="processExcelFiles()">✨ データを統合して美しい横長表とグラフを生成する ✨</button>
+    </div>
+
+    <div class="result-section" id="resultSection">
+        
+        <!-- 💖 列を削除し、見出しにテスト名を動的に埋め込むように変更 -->
+        <div class="section-block">
+            <div class="section-title" id="titlePerfect">💖 優秀な人（いずれかの教科で 80点以上 ※★枠は受講科目）</div>
+            <table id="tablePerfect"><thead><tr><th>生徒ID</th><th>生徒氏名</th><th>該当科目・点数</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <!-- 📈 見出しに比較テスト名が動的にプロットされます -->
+        <div class="section-block">
+            <div class="section-title" id="titleUpOnly">📈 成績が大きく上がった人（【受講科目限定】 +10点以上の変動）</div>
+            <table id="tableUpOnly"><thead><tr><th>生徒ID</th><th>生徒氏名</th><th>科目</th><th>前回 → 今回</th><th>推移</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <!-- 📉 見出しに比較テスト名が動的にプロットされます -->
+        <div class="section-block">
+            <div class="section-title" id="titleDownOnly">📉 成績が大きく下がった人（【受講科目限定】 -10点以上の変動）</div>
+            <table id="tableDownOnly"><thead><tr><th>生徒ID</th><th>生徒氏名</th><th>科目</th><th>前回 → 今回</th><th>推移</th></tr></thead><tbody></tbody></table>
+        </div>
+        
+        <!-- 🚨 列を削除し、見出しにテスト名を動的に埋め込むように変更 -->
+        <div class="section-block">
+            <div class="section-title" id="titleBad">🚨 サポートが必要な人（いずれかの教科で 50点以下 ※★枠は受講科目）</div>
+            <table id="tableBad"><thead><tr><th>生徒ID</th><th>生徒氏名</th><th>該当科目・点数</th></tr></thead><tbody></tbody></table>
+        </div>
+
+        <div class="section-block">
+            <div class="section-title">📊 生徒別・年間受講科目成績推移表（タイムライン）</div>
+            <div style="overflow-x: auto;">
+                <table id="mainMatrixTable">
+                    <thead id="matrixHeader"></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFiles = [];
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('excelFiles');
+const fileCountText = document.getElementById('fileCount');
+let chartInstances = []; 
+
+function extractTestName(fileName) {
+    if (fileName.includes("受講科目")) return "受講科目";
+    let baseName = fileName.substring(0, fileName.lastIndexOf('.')).trim();
+    let match = baseName.match(/(20\d{2}年(?:前期|後期)(?:中間|期末|テスト)?)/);
+    if (match) return match[1];
+    return baseName;
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); }, false);
+});
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); }, false);
+});
+
+dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    selectedFiles = Array.from(dt.files).filter(file => file.name.endsWith('.xlsx') || file.name.endsWith('.xls'));
+    displayFileCount();
+});
+fileInput.addEventListener('change', (e) => {
+    selectedFiles = Array.from(fileInput.files);
+    displayFileCount();
+});
+
+function displayFileCount() {
+    if (selectedFiles.length > 0) {
+        fileCountText.innerHTML = `🌟 <strong>${selectedFiles.length}個</strong> のファイルが正常に読み込まれました。`;
+    } else {
+        fileCountText.textContent = "ファイルが選択されていません";
+    }
+}
+
+const SUBJECTS = ["英語", "数学", "理科", "社会", "国語"];
+const SUB_CLASSES = ["sub-eng", "sub-mat", "sub-sci", "sub-soc", "sub-jap"];
+
+function getColoredSubjectHTML(sIdx, score, isEnrolled) {
+    const text = isEnrolled ? `★${SUBJECTS[sIdx]}★` : SUBJECTS[sIdx];
+    const enrolledClass = isEnrolled ? "enrolled-style" : "";
+    return `<span class="subject-box ${SUB_CLASSES[sIdx]} ${enrolledClass}">${text}: <strong>${score}点</strong></span>`;
+}
+
+function processExcelFiles() {
+    if (selectedFiles.length === 0) {
+        alert("お嬢様、Excelファイルが投入されておりません。");
+        return;
+    }
+
+    chartInstances.forEach(instance => instance.destroy());
+    chartInstances = [];
+
+    const studentDatabase = {};
+    const courseDatabase = {};
+    const idDatabase = {};
+    let detectedTestTypes = new Set();
+    let filesRead = 0;
+    
+    const sortedFiles = [...selectedFiles].sort((a, b) => {
+        return (a.name.includes("受講科目") ? 0 : 1) - (b.name.includes("受講科目") ? 0 : 1);
+    });
+
+    sortedFiles.forEach((file) => {
+        let testType = extractTestName(file.name);
+        if (testType !== "受講科目") {
+            detectedTestTypes.add(testType);
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+            if (testType === "受講科目") {
+                let nameCol = -1, courseCol = -1, idCol = -1;
+                for (let r = 0; r < rows.length; r++) {
+                    if (!rows[r]) continue;
+                    let rowStr = rows[r].map(cell => String(cell || '').trim());
+                    if (rowStr.includes("生徒氏名") && rowStr.includes("受講科目")) {
+                        nameCol = rowStr.indexOf("生徒氏名");
+                        courseCol = rowStr.indexOf("受講科目");
+                        idCol = rowStr.indexOf("生徒ID");
+                        break;
+                    }
+                }
+                if (nameCol !== -1 && courseCol !== -1) {
+                    for (let r = 0; r < rows.length; r++) {
+                        if (!rows[r]) continue;
+                        let sName = String(rows[r][nameCol] || '').trim();
+                        if (sName && sName !== "" && sName !== "生徒氏名" && sName !== "undefined") {
+                            let courseText = String(rows[r][courseCol] || '').trim();
+                            courseDatabase[sName] = SUBJECTS.map(sub => courseText.includes(sub) || courseText.includes(sub.charAt(0)));
+                            if (idCol !== -1 && rows[r][idCol]) idDatabase[sName] = String(rows[r][idCol]).trim();
+                        }
+                    }
+                }
+            } else {
+                let nameColIdx = -1, scoreColIdx = -1, prevColIdx = -1, idColIdx = -1, headerRowIdx = -1;
+                for (let r = 0; r < rows.length; r++) {
+                    if (!rows[r]) continue;
+                    let rowStr = rows[r].map(cell => String(cell || '').trim());
+                    if (rowStr.includes("生徒氏名") && rowStr.includes("得点")) {
+                        nameColIdx = rowStr.indexOf("生徒氏名");
+                        scoreColIdx = rowStr.indexOf("得点");
+                        prevColIdx = rowStr.indexOf("前回得点");
+                        idColIdx = rowStr.indexOf("生徒ID");
+                        headerRowIdx = r;
+                        break;
+                    }
+                }
+                if (headerRowIdx !== -1) {
+                    for (let r = headerRowIdx + 1; r < rows.length; r++) {
+                        if (!rows[r]) continue;
+                        let studentName = String(rows[r][nameColIdx] || '').trim();
+                        if (studentName && studentName !== "" && studentName !== "undefined" && studentName !== "生徒氏名") {
+                            if (!studentDatabase[studentName]) studentDatabase[studentName] = {};
+                            if (idColIdx !== -1 && rows[r][idColIdx]) idDatabase[studentName] = String(rows[r][idColIdx]).trim();
+                            
+                            let currentScores = [];
+                            for (let c = 0; c < 5; c++) {
+                                let val = String(rows[r][scoreColIdx + c] || '').trim();
+                                let parsed = parseInt(val, 10);
+                                if (!isNaN(parsed)) currentScores.push(parsed);
+                            }
+                            if (currentScores.length === 5) studentDatabase[studentName][testType] = currentScores;
+                        }
+                    }
+                }
+            }
+
+            filesRead++;
+            if (filesRead === sortedFiles.length) {
+                let orderedTestTypes = Array.from(detectedTestTypes).sort();
+                generateTableResults(studentDatabase, courseDatabase, idDatabase, orderedTestTypes);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+function generateTableResults(db, courseDb, idDb, orderedTestTypes) {
+    const perfectBody = document.querySelector('#tablePerfect tbody');
+    const upBody = document.querySelector('#tableUpOnly tbody');
+    const downBody = document.querySelector('#tableDownOnly tbody');
+    const badBody = document.querySelector('#tableBad tbody');
+    const mainMatrixBody = document.querySelector('#mainMatrixTable tbody');
+    const matrixHeader = document.getElementById('matrixHeader');
+
+    perfectBody.innerHTML = ''; upBody.innerHTML = ''; downBody.innerHTML = ''; badBody.innerHTML = ''; mainMatrixBody.innerHTML = '';
+    
+    let headerHTML = `<tr><th>生徒ID</th><th>生徒氏名</th><th>受講科目</th>`;
+    orderedTestTypes.forEach(tType => { headerHTML += `<th>${tType}</th>`; });
+    headerHTML += `</tr>`;
+    matrixHeader.innerHTML = headerHTML;
+
+    // 最新テストと、その1つ前のテストの名前を動的に特定
+    let latestTestType = orderedTestTypes[orderedTestTypes.length - 1] || "最新テスト";
+    let secondLatestTestType = orderedTestTypes[orderedTestTypes.length - 2] || "前回テスト";
+
+    // ✨ 見出しの文言をお嬢様のアイデア通り動的に書き換え！
+    document.getElementById('titlePerfect').innerHTML = `💖 優秀な人（直近の【${latestTestType}】で 80点以上 ※★枠は受講科目）`;
+    document.getElementById('titleUpOnly').innerHTML = `📈 成績が大きく上がった人（【${secondLatestTestType}】 から 【${latestTestType}】 への比較：【受講科目限定】 +10点以上）`;
+    document.getElementById('titleDownOnly').innerHTML = `📉 成績が大きく下がった人（【${secondLatestTestType}】 から 【${latestTestType}】 への比較：【受講科目限定】 -10点以上）`;
+    document.getElementById('titleBad').innerHTML = `🚨 サポートが必要な人（直近の【${latestTestType}】で 50点以下 ※★枠は受講科目）`;
+
+    let hasPerfect = false, hasUp = false, hasDown = false, hasBad = false;
+    let chartQueue = []; 
+    let uniqueIdCounter = 0;
+
+    for (const [studentName, tests] of Object.entries(db)) {
+        const isEnrolled = courseDb[studentName] || [true, true, true, true, true];
+        const studentID = idDb[studentName] || "不明";
+
+        // 各生徒ごとの固有の最新2期間を取得（念のため）
+        let sLatest = null;
+        let sSecond = null;
+        for (let t = orderedTestTypes.length - 1; t >= 0; t--) {
+            if (tests[orderedTestTypes[t]]) {
+                if (!sLatest) sLatest = orderedTestTypes[t];
+                else if (!sSecond) { sSecond = orderedTestTypes[t]; break; }
+            }
+        }
+
+        // ① 優秀 ＆ サポート判定（不要な列は削除してスッキリ表示）
+        if (sLatest) {
+            const scores = tests[sLatest];
+            let pCells = [], bCells = [];
+            scores.forEach((score, sIdx) => {
+                let sHTML = getColoredSubjectHTML(sIdx, score, isEnrolled[sIdx]);
+                if (score >= 80) pCells.push(sHTML);
+                if (score <= 50) bCells.push(sHTML);
+            });
+            if (pCells.length > 0) {
+                perfectBody.innerHTML += `<tr><td>${studentID}</td><td><strong>${studentName}</strong></td><td>${pCells.join(' ')}</td></tr>`;
+                hasPerfect = true;
+            }
+            if (bCells.length > 0) {
+                badBody.innerHTML += `<tr><td>${studentID}</td><td><strong>${studentName}</strong></td><td>${bCells.join(' ')}</td></tr>`;
+                hasBad = true;
+            }
+        }
+
+        // ② アップ・ダウン判定（受講科目限定）
+        if (sLatest && sSecond) {
+            const curScores = tests[sSecond];
+            const nxtScores = tests[sLatest];
+
+            for (let sIdx = 0; sIdx < 5; sIdx++) {
+                if (!isEnrolled[sIdx]) continue; 
+
+                const diff = nxtScores[sIdx] - curScores[sIdx];
+                const subBox = `<span class="subject-box ${SUB_CLASSES[sIdx]} enrolled-style">★${SUBJECTS[sIdx]}★: <strong>${nxtScores[sIdx]}点</strong></span>`;
+
+                if (diff >= 10) {
+                    upBody.innerHTML += `<tr>
+                        <td>${studentID}</td><td><strong>${studentName}</strong></td>
+                        <td>${subBox}</td>
+                        <td>${curScores[sIdx]}点 → ${nxtScores[sIdx]}点</td>
+                        <td><span class="up-trend">▲ +${diff}点 上昇</span></td>
+                    </tr>`;
+                    hasUp = true;
+                }
+                if (diff <= -10) {
+                    downBody.innerHTML += `<tr>
+                        <td>${studentID}</td><td><strong>${studentName}</strong></td>
+                        <td>${subBox}</td>
+                        <td>${curScores[sIdx]}点 → ${nxtScores[sIdx]}点</td>
+                        <td><span class="down-trend">▼ ${diff}点 下降</span></td>
+                    </tr>`;
+                    hasDown = true;
+                }
+            }
+        }
+
+        // ③ 下部タイムラインテーブルの構築
+        SUBJECTS.forEach((subName, sIdx) => {
+            if (!isEnrolled[sIdx]) return; 
+
+            let scoreRow = document.createElement('tr');
+            scoreRow.innerHTML = `<td>${studentID}</td><td><strong>${studentName}</strong></td><td><span class="subject-box ${SUB_CLASSES[sIdx]} enrolled-style">★${subName}★</span></td>`;
+
+            let singleSubjectScores = []; 
+
+            orderedTestTypes.forEach((tType, tIdx) => {
+                if (tests[tType]) {
+                    let score = tests[tType][sIdx];
+                    singleSubjectScores.push(score);
+
+                    let arrow = "";
+                    let prevType = null;
+                    for (let p = tIdx - 1; p >= 0; p--) { if (tests[orderedTestTypes[p]]) { prevType = orderedTestTypes[p]; break; } }
+                    if (prevType) {
+                        let prevScore = tests[prevType][sIdx];
+                        if (score > prevScore) arrow = ` <span class="up-trend">(▲+${score - prevScore})</span>`;
+                        if (score < prevScore) arrow = ` <span class="down-trend">(▼${score - prevScore})</span>`;
+                    }
+                    scoreRow.innerHTML += `<td><span style="font-weight:bold;">${score}点</span>${arrow}</td>`;
+                } else {
+                    scoreRow.innerHTML += `<td>-</td>`;
+                    singleSubjectScores.push(null);
+                }
+            });
+
+            mainMatrixBody.appendChild(scoreRow);
+
+            let chartRow = document.createElement('tr');
+            chartRow.className = "chart-row";
+            let chartCanvasId = `chart-canvas-${uniqueIdCounter++}`;
+            let totalColumns = 3 + orderedTestTypes.length;
+            
+            chartRow.innerHTML = `<td colspan="${totalColumns}">
+                <div class="small-chart-container">
+                    <canvas id="${chartCanvasId}"></canvas>
+                </div>
+            </td>`;
+            mainMatrixBody.appendChild(chartRow);
+
+            chartQueue.push({ id: chartCanvasId, scores: singleSubjectScores, labels: orderedTestTypes });
+        });
+    }
+
+    if (!hasPerfect) perfectBody.innerHTML = '<tr><td colspan="3" class="empty-msg">条件に該当する生徒はおりません</td></tr>';
+    if (!hasUp) upBody.innerHTML = '<tr><td colspan="5" class="empty-msg">直近の受講科目で+10点以上上昇した生徒はおりません</td></tr>';
+    if (!hasDown) downBody.innerHTML = '<tr><td colspan="5" class="empty-msg">直近の受講科目で-10点以上下落した生徒はおりません</td></tr>';
+    if (!hasBad) badBody.innerHTML = '<tr><td colspan="3" class="empty-msg">条件に該当する生徒はおりません✨</td></tr>';
+
+    setTimeout(() => {
+        chartQueue.forEach(item => { renderInlineChart(item.id, item.scores, item.labels); });
+    }, 100);
+
+    document.getElementById('resultSection').style.display = 'block';
+}
+
+function renderInlineChart(canvasId, scores, labels) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const instance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: scores,
+                borderColor: '#cc5a75', 
+                borderWidth: 2.5,
+                pointBackgroundColor: '#ff8fa3',
+                pointRadius: 3,
+                backgroundColor: 'transparent',
+                tension: 0.15,
+                spanGaps: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: {
+                y: { min: 0, max: 100, ticks: { display: false }, grid: { display: false }, border: { display: false } },
+                x: { ticks: { color: '#8c7074', font: { size: 9 } }, grid: { display: false }, border: { display: false } }
+            }
+        }
+    });
+    chartInstances.push(instance);
+}
+</script>
+
+</body>
+</html>
